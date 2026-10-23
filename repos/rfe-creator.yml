@@ -1,0 +1,19 @@
+# Snapshotted from the live ruleset (2026-10-23).
+rulesets:
+- name: main
+  target: branch
+  enforcement: active
+  conditions:
+    ref_name:
+      include:
+      - refs/heads/main
+  rules:
+  - type: deletion
+  - type: non_fast_forward
+  - type: pull_request
+    parameters:
+      require_extra_approval_for_unattributed_changes: true
+      allowed_merge_methods:
+      - merge
+      - squash
+      - rebase

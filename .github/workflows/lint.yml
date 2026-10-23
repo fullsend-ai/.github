@@ -1,0 +1,21 @@
+# Fast convention checks on the governance config; runs before the
+# token-backed dry-run jobs and needs no credentials.
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install --quiet pyyaml
+      - run: python3 scripts/lint.py

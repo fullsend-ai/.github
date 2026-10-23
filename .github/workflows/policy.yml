@@ -1,0 +1,93 @@
+# Daily compliance checks: ruleset coverage, file hygiene, fleet
+# registration. Verdicts come from the step summary, not exit codes --
+# an operational failure must not read as a compliant org.
+name: policy
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ORG: fullsend-ai
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Mint scoped governance token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.GOVERNANCE_APP_ID }}
+          private-key: ${{ secrets.GOVERNANCE_APP_PRIVATE_KEY }}
+      - name: Run policy checks
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          fleet=$(python3 -c "
+          import glob, os, yaml
+          c = yaml.safe_load(open('peribolos.yaml'))
+          org = c['orgs']['$ORG']
+          repos = set(org.get('repos') or {})
+          for t in (org.get('teams') or {}).values():
+              repos |= set((t.get('repos') or {}).keys())
+          for f in glob.glob('repos/*.yml') + glob.glob('repos/.*.yml'):
+              repos.add(os.path.basename(f)[:-4])
+          print('\n'.join(sorted(repos)))")
+
+          # *-ghsa-* repos are ephemeral security advisory artifacts (any
+          # repo can spawn one), not fleet members
+          live=$(gh api --paginate "orgs/$ORG/repos" --jq '.[].name' | grep -v -- '-ghsa-' | sort -u)
+
+          summary="$GITHUB_STEP_SUMMARY"
+          echo "# Policy check $(date -u +%F)" >> "$summary"
+
+          echo "## Unregistered repos (live but not in peribolos.yaml)" >> "$summary"
+          unregistered=$(comm -13 <(sort -u <<< "$fleet") <(sort -u <<< "$live"))
+          if [ -n "$unregistered" ]; then
+            echo '```' >> "$summary"; echo "$unregistered" >> "$summary"; echo '```' >> "$summary"
+          else
+            echo 'none' >> "$summary"
+          fi
+
+          echo "## Per-repo results" >> "$summary"
+          echo '| repo | default-branch ruleset | CODEOWNERS | SECURITY.md |' >> "$summary"
+          echo '|---|---|---|---|' >> "$summary"
+
+          # covered = an org-level or repo-level branch ruleset, not disabled,
+          # whose ref_name conditions include ~DEFAULT_BRANCH (or are empty).
+          # shortcut: ignores repository_name conditions on org rulesets.
+          covered() {
+            for src in "orgs/$ORG/rulesets" "repos/$ORG/$repo/rulesets"; do
+              while IFS= read -r rs; do
+                if [ "$(jq -r '.target' <<< "$rs")" = branch ] \
+                   && [ "$(jq -r '.enforcement' <<< "$rs")" != disabled ] \
+                   && jq -e '(.conditions.ref_name.include // []) | (index("~DEFAULT_BRANCH") != null) or (length == 0)' <<< "$rs" > /dev/null; then
+                  return 0
+                fi
+              done < <(gh api --paginate "$src" --jq '.[] | @json' 2>/dev/null || true)
+            done
+            return 1
+          }
+
+          for repo in $fleet; do
+            row="| $repo |"
+            if covered; then row+=" ok |"; else row+=" **MISSING** |"; fi
+            for f in CODEOWNERS SECURITY.md; do
+              if gh api "repos/$ORG/$repo/contents/$f" --jq .name > /dev/null 2>&1; then
+                row+=" ok |"
+              else
+                row+=" **MISSING** |"
+              fi
+            done
+            echo "$row" >> "$summary"
+          done

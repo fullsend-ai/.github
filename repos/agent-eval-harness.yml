@@ -1,0 +1,16 @@
+# Snapshotted from the live ruleset (2026-10-23). Excluded from the org
+# baseline: semantic-release pushes version bumps to main with GITHUB_TOKEN,
+# which cannot be bypassed surgically. Keeps the existing deletion /
+# non-fast-forward protection; add PR requirements once the release flow
+# moves to an App token (then remove the exclusion).
+rulesets:
+- name: main
+  target: branch
+  enforcement: active
+  conditions:
+    ref_name:
+      include:
+      - ~DEFAULT_BRANCH
+  rules:
+  - type: deletion
+  - type: non_fast_forward

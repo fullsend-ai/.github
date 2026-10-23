@@ -1,0 +1,35 @@
+# Strict ruleset for the governance repo itself: every change here
+# controls the org, so PRs require core review (CODEOWNERS) and all
+# validation jobs. Fork PRs skip the dry-runs (no token) -- do not merge
+# those without running the validation locally. Merge queue omitted:
+# low-traffic config repo.
+rulesets:
+  - name: main
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include:
+          - ~DEFAULT_BRANCH
+    rules:
+      - type: deletion
+      - type: non_fast_forward
+      - type: pull_request
+        parameters:
+          required_approving_review_count: 1
+          dismiss_stale_reviews_on_push: true
+          require_code_owner_review: true
+          require_last_push_approval: true
+          require_extra_approval_for_unattributed_changes: true
+          allowed_merge_methods: [merge, squash, rebase]
+      - type: required_status_checks
+        parameters:
+          strict_required_status_checks_policy: true
+          do_not_enforce_on_create: false
+          required_status_checks:
+            - context: lint
+              integration_id: 15368 # GitHub Actions
+            - context: peribolos-dry-run
+              integration_id: 15368
+            - context: safe-settings-dry-run
+              integration_id: 15368

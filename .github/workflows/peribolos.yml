@@ -1,0 +1,102 @@
+# Org governance: peribolos plus the org/*.json pins via gh api.
+# PRs run dry; merges to main and the daily schedule apply.
+name: peribolos
+
+on:
+  push:
+    branches: [main]
+    paths: ['peribolos.yaml', 'org/**']
+  pull_request:
+    paths: ['peribolos.yaml', 'org/**']
+  schedule:
+    - cron: '0 6 * * *' # daily reconcile against drift
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ORG: fullsend-ai
+  PROW_REF: 6c4d88e3b73e434d7acc03395ec337fa2b3f1fad # kubernetes-sigs/prow, pinned 2026-10
+
+jobs:
+  # Dry run on every PR: validates the config and prints the diff.
+  # Skipped on fork PRs: they cannot mint the App token.
+  peribolos-dry-run:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Mint scoped governance token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.GOVERNANCE_APP_ID }}
+          private-key: ${{ secrets.GOVERNANCE_PRIVATE_KEY }}
+      - name: Check out prow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: kubernetes-sigs/prow
+          ref: ${{ env.PROW_REF }}
+          path: prow
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: prow/go.mod
+      - name: Peribolos dry run
+        run: |
+          printf '%s' "${{ steps.app-token.outputs.token }}" > /tmp/peribolos.token
+          cd prow
+          go run ./cmd/peribolos \
+            --config-path="$GITHUB_WORKSPACE/peribolos.yaml" \
+            --github-token-path=/tmp/peribolos.token \
+            --min-admins=2 \
+            --require-self=false \
+            --ignore-enterprise-teams \
+            --fix-org --fix-org-members --fix-teams --fix-team-members --fix-team-repos \
+            --fix-collaborators
+
+  apply:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Mint scoped governance token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.GOVERNANCE_APP_ID }}
+          private-key: ${{ secrets.GOVERNANCE_PRIVATE_KEY }}
+      - name: Check out prow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: kubernetes-sigs/prow
+          ref: ${{ env.PROW_REF }}
+          path: prow
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: prow/go.mod
+      - name: Apply peribolos.yaml
+        run: |
+          printf '%s' "${{ steps.app-token.outputs.token }}" > /tmp/peribolos.token
+          cd prow
+          go run ./cmd/peribolos \
+            --config-path="$GITHUB_WORKSPACE/peribolos.yaml" \
+            --github-token-path=/tmp/peribolos.token \
+            --min-admins=2 \
+            --require-self=false \
+            --ignore-enterprise-teams \
+            --fix-org --fix-org-members --fix-teams --fix-team-members --fix-team-repos \
+            --fix-collaborators \
+            --confirm
+      - name: Apply org member privileges
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh api -X PATCH "/orgs/$ORG" --input org/member-privileges.json
+      - name: Apply Actions permissions
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh api -X PUT "/orgs/$ORG/actions/permissions" --input org/actions-permissions.json

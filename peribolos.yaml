@@ -1,0 +1,228 @@
+# Source of truth for membership, teams, grants, and collaborators.
+# Generated 2026-10-23 with `peribolos --dump fullsend-ai
+# --ignore-enterprise-teams`; reconciled by the peribolos workflow.
+# Peribolos REMOVES anything not listed here.
+#
+# - The enterprise-managed team (ent:enterprise-security-managers) is
+#   deliberately absent; --ignore-enterprise-teams leaves it alone.
+# - Repo blocks carry collaborators only; repo settings belong to
+#   safe-settings. Absent fields are unmanaged.
+# - Member privilege flags live in org/member-privileges.json.
+# - Fleet inventory for policy.yml = teams[].repos + repos[] keys.
+
+orgs:
+  fullsend-ai:
+    has_organization_projects: true
+    has_repository_projects: true
+    default_repository_permission: read
+
+    admins:
+      - ascerra
+      - ben-alkov
+      - ederign
+      - ggallen
+      - ifireball
+      - maruiz93
+      - ralphbean
+      - rh-hemartin
+      - waynesun09
+
+    members:
+      - andrewevansrh
+      - arewm
+      - AshwinUgale
+      - Benkapner
+      - csoceanu
+      - deboer-tim
+      - dhshah13
+      - dora-the-ai-coder
+      - durandom
+      - gklein
+      - heyjerrybecker
+      - jflowers
+      - jhutar
+      - jwm4
+      - kelchen123
+      - mfrancisc
+      - mrizzi
+      - ravelley
+      - Roming22
+      - sahil143
+      - shairevivo
+      - tpouyer
+
+    repos:
+      adoption-analytics:
+        collaborators:
+          gklein: maintain
+      agent-eval-harness:
+        collaborators:
+          astefanutti: admin
+          ederign: admin
+      agents:
+        collaborators:
+          AshwinUgale: triage
+          Roming22: write
+          deboer-tim: triage
+          jflowers: write
+      assess-rfe:
+        collaborators:
+          astefanutti: admin
+          ederign: admin
+      assess-strat: # archived
+        collaborators:
+          ederign: admin
+          jctanner: admin
+      autonomy-readiness:
+        collaborators:
+          ralphbean: admin
+      devlake:
+        collaborators:
+          ciaramulligan: maintain
+          ederign: admin
+          kpiwko: maintain
+          mfrancisc: admin
+          michaelkleinhenz: maintain
+          rnapoles-rh: maintain
+          rsoaresd: maintain
+      epic-creator:
+        collaborators:
+          MichaelYochpaz: admin
+          astefanutti: maintain
+          ederign: admin
+          jctanner: maintain
+      experiments:
+        collaborators:
+          AshwinUgale: triage
+      features: # archived
+        collaborators:
+          Aliciapet11: read
+          Dannyb48: maintain
+          alanonthegit: maintain
+          dhshah13: maintain
+          durandom: maintain
+          ggallen: admin
+          heyjerrybecker: maintain
+          ifireball: admin
+          jbpratt: read
+          manish-jangra: maintain
+          maruiz93: admin
+          ralphbean: admin
+          waynesun09: admin
+          yuvalgalanti: maintain
+      fullsend:
+        collaborators:
+          AshwinUgale: triage
+          Roming22: write
+      rfe-creator:
+        collaborators:
+          astefanutti: admin
+          ederign: admin
+          jctanner: maintain
+      scribe:
+        collaborators:
+          ben-alkov: admin
+          ggallen: admin
+          ifireball: admin
+          maruiz93: admin
+          ralphbean: admin
+          rh-hemartin: admin
+          waynesun09: admin
+      strat-creator:
+        collaborators:
+          astefanutti: maintain
+          ederign: admin
+          jctanner: admin
+      test-creator:
+        collaborators:
+          ederign: admin
+          fege: admin
+
+    # closed is GitHub's most transparent team setting; this published
+    # file is the public roster.
+    teams:
+      core:
+        description: Core team
+        privacy: closed
+        maintainers:
+          - ralphbean
+          - ifireball
+          - waynesun09
+          - ggallen
+          - maruiz93
+          - ben-alkov
+          - ascerra
+          - rh-hemartin
+        members:
+          - dhshah13
+        repos:
+          .github: write # governance config; CODEOWNERS routes review to this team
+          agent-eval-harness: write
+          agents: write
+          assess-rfe: write
+          assess-strat: write
+          autonomy-analysis: write
+          autonomy-readiness: read
+          epic-creator: write
+          experiments: admin
+          fullsend: write
+          infrastructure-as-code: admin
+          metrics: write
+          rfe-creator: write
+          strat-creator: write
+          test-creator: write
+      triagers:
+        description: People with rights to /fs-triage
+        privacy: closed
+        maintainers:
+          - ralphbean
+        members:
+          - gklein
+          - durandom
+          - jflowers
+          - jhutar
+          - ravelley
+          - mrizzi
+          - tpouyer
+          - mfrancisc
+          - jwm4
+          - deboer-tim
+          - dhshah13
+          - shairevivo
+          - andrewevansrh
+        repos:
+          agent-eval-harness: triage
+          agents: triage
+          assess-rfe: triage
+          assess-strat: triage
+          epic-creator: triage
+          fullsend: triage
+          rfe-creator: triage
+          strat-creator: triage
+          test-creator: triage
+      writers:
+        description: People with access to /fs-code
+        privacy: closed
+        maintainers:
+          - ralphbean
+        members:
+          - gklein
+          - jflowers
+          - Roming22
+          - ravelley
+          - jwm4
+          - Benkapner
+          - dhshah13
+          - shairevivo
+          - csoceanu
+        repos:
+          .fullsend: write
+          agent-eval-harness: write
+          agents: write
+          assess-rfe: write
+          assess-strat: write
+          epic-creator: write
+          fullsend: write
+          rfe-creator: write
+          strat-creator: write
+          test-creator: write
