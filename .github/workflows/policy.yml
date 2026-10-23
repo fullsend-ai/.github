@@ -26,7 +26,9 @@ jobs:
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ vars.GOVERNANCE_APP_ID }}
-          private-key: ${{ secrets.GOVERNANCE_APP_PRIVATE_KEY }}
+          private-key: ${{ secrets.GOVERNANCE_PRIVATE_KEY }}
+          # Installation-wide token: the checks read rulesets across repos.
+          owner: fullsend-ai
       - name: Run policy checks
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -64,14 +66,31 @@ jobs:
           echo '|---|---|---|---|' >> "$summary"
 
           # covered = an org-level or repo-level branch ruleset, not disabled,
-          # whose ref_name conditions include ~DEFAULT_BRANCH (or are empty).
-          # shortcut: ignores repository_name conditions on org rulesets.
+          # whose ref_name conditions include ~DEFAULT_BRANCH (or are empty)
+          # and whose repository_name conditions (org rulesets) match $repo.
+          name_conditions_ok() {
+            local p inc exc
+            inc=$(jq -r '(.conditions.repository_name.include // []) | .[]' <<< "$1")
+            exc=$(jq -r '(.conditions.repository_name.exclude // []) | .[]' <<< "$1")
+            if [ -n "$inc" ]; then
+              for p in $inc; do
+                if [[ "$repo" == $p ]]; then return 0; fi
+              done
+              return 1
+            fi
+            for p in $exc; do
+              if [[ "$repo" == $p ]]; then return 1; fi
+            done
+            return 0
+          }
+
           covered() {
             for src in "orgs/$ORG/rulesets" "repos/$ORG/$repo/rulesets"; do
               while IFS= read -r rs; do
                 if [ "$(jq -r '.target' <<< "$rs")" = branch ] \
                    && [ "$(jq -r '.enforcement' <<< "$rs")" != disabled ] \
-                   && jq -e '(.conditions.ref_name.include // []) | (index("~DEFAULT_BRANCH") != null) or (length == 0)' <<< "$rs" > /dev/null; then
+                   && jq -e '(.conditions.ref_name.include // []) | (index("~DEFAULT_BRANCH") != null) or (length == 0)' <<< "$rs" > /dev/null \
+                   && name_conditions_ok "$rs"; then
                   return 0
                 fi
               done < <(gh api --paginate "$src" --jq '.[] | @json' 2>/dev/null || true)

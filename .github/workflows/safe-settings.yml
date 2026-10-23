@@ -5,9 +5,11 @@ name: safe-settings
 on:
   push:
     branches: [main]
-    paths: ['settings.yml', 'repos/**']
+    paths: ['settings.yml', 'repos/**', 'deployment-settings.yml']
+  # All PRs, unfiltered: the .github ruleset requires this check on every
+  # pull request; a path-filtered trigger would leave it missing and block
+  # merges. Fork PRs skip the job (no token) and need an admin bypass.
   pull_request:
-    paths: ['settings.yml', 'repos/**']
   schedule:
     - cron: '0 7 * * *' # daily reconcile against drift
   workflow_dispatch:
@@ -18,6 +20,9 @@ permissions:
 env:
   SAFE_SETTINGS_VERSION: '3.0.0'
   SAFE_SETTINGS_CODE_DIR: ${{ github.workspace }}/.safe-settings-code
+  # Points safe-settings at our deployment config; the default
+  # restrictedRepos list would skip the `.github` repo itself.
+  DEPLOYMENT_CONFIG_FILE: ${{ github.workspace }}/deployment-settings.yml
 
 jobs:
   # Skipped on fork PRs: they cannot mint the App token.

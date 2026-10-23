@@ -6,8 +6,10 @@ on:
   push:
     branches: [main]
     paths: ['peribolos.yaml', 'org/**']
+  # All PRs, unfiltered: the .github ruleset requires this check on every
+  # pull request; a path-filtered trigger would leave it missing and block
+  # merges. Fork PRs skip the job (no token) and need an admin bypass.
   pull_request:
-    paths: ['peribolos.yaml', 'org/**']
   schedule:
     - cron: '0 6 * * *' # daily reconcile against drift
   workflow_dispatch:
@@ -35,6 +37,9 @@ jobs:
         with:
           app-id: ${{ vars.GOVERNANCE_APP_ID }}
           private-key: ${{ secrets.GOVERNANCE_PRIVATE_KEY }}
+          # Without an explicit owner the token is scoped to this repo only,
+          # and every cross-repo call (collaborators, teams-repos) 403s.
+          owner: fullsend-ai
       - name: Check out prow
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,6 +49,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: prow/go.mod
+          # The repo root has no go.sum, so setup-go's default module cache
+          # lookup finds nothing; point it at prow's (pinned ref = stable key).
+          cache-dependency-path: prow/go.sum
       - name: Peribolos dry run
         run: |
           printf '%s' "${{ steps.app-token.outputs.token }}" > /tmp/peribolos.token
@@ -70,6 +78,9 @@ jobs:
         with:
           app-id: ${{ vars.GOVERNANCE_APP_ID }}
           private-key: ${{ secrets.GOVERNANCE_PRIVATE_KEY }}
+          # Without an explicit owner the token is scoped to this repo only,
+          # and every cross-repo call (collaborators, teams-repos) 403s.
+          owner: fullsend-ai
       - name: Check out prow
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -79,6 +90,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: prow/go.mod
+          # The repo root has no go.sum, so setup-go's default module cache
+          # lookup finds nothing; point it at prow's (pinned ref = stable key).
+          cache-dependency-path: prow/go.sum
       - name: Apply peribolos.yaml
         run: |
           printf '%s' "${{ steps.app-token.outputs.token }}" > /tmp/peribolos.token
