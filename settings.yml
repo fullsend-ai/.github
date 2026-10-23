@@ -27,7 +27,9 @@ rulesets:
       ref_name:
         include:
           - ~DEFAULT_BRANCH
+        exclude: []
       repository_name:
+        include: []
         exclude:
           - devlake # fork synced by direct push; see repos/devlake.yml
           - agent-eval-harness # semantic-release pushes to main with GITHUB_TOKEN; see repos/agent-eval-harness.yml
@@ -43,7 +45,17 @@ rulesets:
       - type: non_fast_forward
       - type: pull_request
         parameters:
+          # Full parameter set: the rulesets API rejects partial rules, and
+          # safe-settings diffs against the full shape GitHub returns.
+          # Zero/false = no opinion; repo rulesets stack on top.
+          required_approving_review_count: 0
+          dismiss_stale_reviews_on_push: false
           require_code_owner_review: true # bites only where CODEOWNERS exists
-          require_extra_approval_for_unattributed_changes: true
+          require_last_push_approval: false
           required_review_thread_resolution: true
+          require_extra_approval_for_unattributed_changes: true
+          dismissal_restriction:
+            enabled: false
+            allowed_actors: []
+          required_reviewers: []
           allowed_merge_methods: [merge, squash, rebase]

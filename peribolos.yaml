@@ -28,6 +28,7 @@ orgs:
       - waynesun09
 
     members:
+      - Aliciapet11
       - andrewevansrh
       - arewm
       - AshwinUgale
@@ -37,6 +38,7 @@ orgs:
       - dhshah13
       - dora-the-ai-coder
       - durandom
+      - fege
       - gklein
       - heyjerrybecker
       - jflowers
@@ -190,6 +192,8 @@ orgs:
           - dhshah13
           - shairevivo
           - andrewevansrh
+          - Aliciapet11
+          - fege
         repos:
           agent-eval-harness: triage
           agents: triage
